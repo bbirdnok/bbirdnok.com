@@ -798,10 +798,12 @@
   function formatExifLine(filename) {
     const e = exifMap[filename];
     if (!e) return '';
+    const lang   = localStorage.getItem('bbn-lang') || 'en';
+    const locale = lang === 'th' ? 'th-TH' : 'en-GB';
     const parts = [];
     if (e.date_taken) {
       const d = new Date(e.date_taken);
-      if (!isNaN(d)) parts.push('\u{1F4C5} ' + d.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'}));
+      if (!isNaN(d)) parts.push('\u{1F4C5} ' + d.toLocaleDateString(locale, {day:'2-digit', month:'short', year:'numeric'}));
     }
     if (e.camera)          parts.push('\u{1F4F7} ' + e.camera);
     if (e.lens)            parts.push('\u{1F52D} ' + e.lens);
