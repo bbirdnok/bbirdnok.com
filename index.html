@@ -606,11 +606,8 @@
         <p class="about-text" data-en>BBirdNok is a Thai nature photographer deeply passionate about birds and wildlife. Driven by love for Thailand's wild habitats, BBirdNok journeys through forests, wetlands and national parks across the country to capture rare and breathtaking moments. Every photograph is the result of patience, observation and a deep respect for nature.</p>
         <div class="gear-label" data-th>กล้องและอุปกรณ์</div>
         <div class="gear-label" data-en>Camera & Equipment</div>
-        <ul class="gear-list">
-          <li>Sony A1</li>
-          <li>Sony A7R IV</li>
-          <li>Sony FE 300mm f/2.8 GM OSS</li>
-          <li>Sony FE 70-200mm f/2.8 GM OSS II</li>
+        <ul class="gear-list" id="gear-list">
+          <!-- auto-populated from exif.csv -->
         </ul>
       </div>
     </div>
@@ -771,23 +768,40 @@
   });
 
   // ── EXIF CSV LOADER ─────────────────────────────────────────────────────
-  // exif.csv is the authoritative source for EXIF data (easy to correct manually)
-  // Falls back to empty string if file not found or row missing
-  let exifMap = {};   // filename → {date, camera, lens, fl, fn, iso}
+  // Parses the custom ":" separated quoted CSV format exported from tools like ExifTool
+  // Field names may contain ":" (e.g. "EXIF:Make") so we extract all quoted tokens per line
+  let exifMap = {};
+
+  function parseCsvLine(line) {
+    const tokens = [];
+    const re = /"([^"]*)"/g;
+    let m;
+    while ((m = re.exec(line)) !== null) tokens.push(m[1]);
+    return tokens;
+  }
+
+  function parseExifDate(raw) {
+    // Format: "2003-10-05_16-24-48" → Date object
+    if (!raw) return null;
+    const iso = raw.replace('_', 'T').replace(/T(\d{2})-(\d{2})-(\d{2})$/, 'T$1:$2:$3');
+    const d = new Date(iso);
+    return isNaN(d) ? null : d;
+  }
 
   async function loadExifCsv() {
     try {
       const res = await fetch('exif.csv?v=' + Date.now());
       if (!res.ok) return;
       const text = await res.text();
-      const lines = text.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
+      const lines = text.trim().split('\n').filter(l => l.trim());
+      const headers = parseCsvLine(lines[0]);
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim());
+        const cols = parseCsvLine(lines[i]);
         const row = {};
         headers.forEach((h, j) => row[h] = cols[j] || '');
-        exifMap[row.filename] = row;
+        exifMap[row['Filename With Ext']] = row;
       }
+      buildGearList();
     } catch(e) { /* silent — CSV optional */ }
   }
 
@@ -800,28 +814,66 @@
     if (!e) return '';
     const lang   = localStorage.getItem('bbn-lang') || 'en';
     const locale = lang === 'th' ? 'th-TH' : 'en-GB';
-    const parts = [];
-    if (e.date_taken) {
-      const d = new Date(e.date_taken);
-      if (!isNaN(d)) parts.push('\u{1F4C5} ' + d.toLocaleDateString(locale, {day:'2-digit', month:'short', year:'numeric'}));
+    const parts  = [];
+
+    const d = parseExifDate(e['EXIF:Date Taken [Y-m-d_H-M-S]']);
+    if (d) parts.push('\u{1F4C5} ' + d.toLocaleDateString(locale, {day:'2-digit', month:'short', year:'numeric'}));
+
+    const make  = e['EXIF:Make']  || '';
+    const model = e['EXIF:Model'] || '';
+    const cam   = model.toUpperCase().startsWith(make.toUpperCase()) ? model : (make + ' ' + model).trim();
+    if (cam) parts.push('\u{1F4F7} ' + cam);
+
+    const lensMake  = e['EXIF:Lens Make']  || '';
+    const lensModel = e['EXIF:Lens Model'] || '';
+    if (lensModel) {
+      const lens = lensModel.toUpperCase().startsWith(lensMake.toUpperCase())
+        ? lensModel : (lensMake + ' ' + lensModel).trim();
+      parts.push('\u{1F52D} ' + lens);
     }
-    if (e.camera)          parts.push('\u{1F4F7} ' + e.camera);
-    if (e.lens)            parts.push('\u{1F52D} ' + e.lens);
-    if (e.focal_length_mm) parts.push(parseFloat(e.focal_length_mm) + 'mm');
-    if (e.f_number)        parts.push('f/' + e.f_number);
-    if (e.iso)             parts.push('ISO ' + e.iso);
+
+    if (e['EXIF:Focal Length']) parts.push(e['EXIF:Focal Length'] + 'mm');
+    if (e['EXIF:F-Number'])     parts.push('f/' + e['EXIF:F-Number']);
+    if (e['EXIF:Shutter Speed'])parts.push(e['EXIF:Shutter Speed'] + 's');
+    if (e['EXIF:ISO Value'])    parts.push('ISO ' + e['EXIF:ISO Value']);
+
     return parts.join('  \u00B7  ');
+  }
+
+  function loadExif(src) {
+    document.getElementById('lb-cap-exif').textContent = formatExifLine(getFilename(src));
+  }
+
+  // ── GEAR LIST — auto-populated from unique cameras + lenses in exif.csv ──
+  function buildGearList() {
+    const ul = document.getElementById('gear-list');
+    if (!ul) return;
+    const cameras = new Set(), lenses = new Set();
+    Object.values(exifMap).forEach(e => {
+      const make  = e['EXIF:Make']  || '';
+      const model = e['EXIF:Model'] || '';
+      const cam   = model.toUpperCase().startsWith(make.toUpperCase()) ? model : (make + ' ' + model).trim();
+      if (cam) cameras.add(cam);
+      const lm  = e['EXIF:Lens Make']  || '';
+      const lmo = e['EXIF:Lens Model'] || '';
+      if (lmo) {
+        const lens = lmo.toUpperCase().startsWith(lm.toUpperCase())
+          ? lmo : (lm + ' ' + lmo).trim();
+        lenses.add(lens);
+      }
+    });
+    ul.innerHTML = '';
+    [...cameras].sort().forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
+    [...lenses].sort().forEach(l => { const li = document.createElement('li'); li.textContent = l; ul.appendChild(li); });
   }
 
   // ── GALLERY SORT BY EXIF DATE ────────────────────────────────────────────
   function sortGalleryByDate() {
-    const grid = document.getElementById('gallery-grid');
+    const grid  = document.getElementById('gallery-grid');
     const items = [...grid.querySelectorAll('.gallery-item')];
     items.sort((a, b) => {
-      const fa = getFilename(a.querySelector('img').src);
-      const fb = getFilename(b.querySelector('img').src);
-      const da = exifMap[fa]?.date_taken ? new Date(exifMap[fa].date_taken) : null;
-      const db = exifMap[fb]?.date_taken ? new Date(exifMap[fb].date_taken) : null;
+      const da = parseExifDate((exifMap[getFilename(a.querySelector('img').src)] || {})['EXIF:Date Taken [Y-m-d_H-M-S]']);
+      const db = parseExifDate((exifMap[getFilename(b.querySelector('img').src)] || {})['EXIF:Date Taken [Y-m-d_H-M-S]']);
       if (!da && !db) return 0;
       if (!da) return 1;
       if (!db) return -1;
@@ -830,7 +882,7 @@
     items.forEach(item => grid.appendChild(item));
   }
 
-  // Boot: load CSV then sort gallery
+  // Boot: load CSV → sort gallery
   loadExifCsv().then(() => sortGalleryByDate());
 
   // ── SPECIES SORT ─────────────────────────────────────────────────────────
