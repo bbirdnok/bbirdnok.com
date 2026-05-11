@@ -750,32 +750,9 @@
     loadExif(item.src);
   }
 
-  async function loadExif(src) {
+  function loadExif(src) {
     const el = document.getElementById('lb-cap-exif');
-    try {
-      if (typeof Exifr === 'undefined') { el.textContent = ''; return; }
-      const exif = await Exifr.parse(src, {
-        tiff: true, exif: true,
-        pick: ['DateTimeOriginal','Make','Model','LensModel','FocalLength','FNumber','ExposureTime','ISOSpeedRatings']
-      });
-      if (!exif) { el.textContent = ''; return; }
-      const parts = [];
-      if (exif.DateTimeOriginal) {
-        const d = new Date(exif.DateTimeOriginal);
-        parts.push('\u{1F4C5} ' + d.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'}));
-      }
-      const camParts = [exif.Make, exif.Model].filter(Boolean);
-      if (camParts.length) {
-        let cam = camParts.join(' ').replace(/^(\w+)\s+\1\s+/i, '$1 ').trim();
-        parts.push('\u{1F4F7} ' + cam);
-      }
-      if (exif.LensModel) parts.push('\u{1F52D} ' + exif.LensModel);
-      if (exif.FocalLength) parts.push(exif.FocalLength + 'mm');
-      if (exif.FNumber)     parts.push('f/' + exif.FNumber);
-      el.textContent = parts.join('  \u00B7  ');
-    } catch(e) {
-      el.textContent = '';
-    }
+    el.textContent = formatExifLine(getFilename(src));
   }
 
   function lbNav(d) { lbIdx = (lbIdx + d + lbItems.length) % lbItems.length; updateLb(); }
@@ -793,29 +770,66 @@
     if (item) openLbGallery([...document.querySelectorAll('.gallery-item')].indexOf(item));
   });
 
+  // ── EXIF CSV LOADER ─────────────────────────────────────────────────────
+  // exif.csv is the authoritative source for EXIF data (easy to correct manually)
+  // Falls back to empty string if file not found or row missing
+  let exifMap = {};   // filename → {date, camera, lens, fl, fn, iso}
+
+  async function loadExifCsv() {
+    try {
+      const res = await fetch('exif.csv?v=' + Date.now());
+      if (!res.ok) return;
+      const text = await res.text();
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim());
+        const row = {};
+        headers.forEach((h, j) => row[h] = cols[j] || '');
+        exifMap[row.filename] = row;
+      }
+    } catch(e) { /* silent — CSV optional */ }
+  }
+
+  function getFilename(src) {
+    return src.split('/').pop().split('?')[0];
+  }
+
+  function formatExifLine(filename) {
+    const e = exifMap[filename];
+    if (!e) return '';
+    const parts = [];
+    if (e.date_taken) {
+      const d = new Date(e.date_taken);
+      if (!isNaN(d)) parts.push('\u{1F4C5} ' + d.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'}));
+    }
+    if (e.camera)          parts.push('\u{1F4F7} ' + e.camera);
+    if (e.lens)            parts.push('\u{1F52D} ' + e.lens);
+    if (e.focal_length_mm) parts.push(parseFloat(e.focal_length_mm) + 'mm');
+    if (e.f_number)        parts.push('f/' + e.f_number);
+    if (e.iso)             parts.push('ISO ' + e.iso);
+    return parts.join('  \u00B7  ');
+  }
+
   // ── GALLERY SORT BY EXIF DATE ────────────────────────────────────────────
-  async function sortGalleryByDate() {
-    if (typeof Exifr === 'undefined') return;
+  function sortGalleryByDate() {
     const grid = document.getElementById('gallery-grid');
     const items = [...grid.querySelectorAll('.gallery-item')];
-    const withDates = await Promise.all(items.map(async item => {
-      const img = item.querySelector('img');
-      let date = null;
-      try {
-        const exif = await Exifr.parse(img.src, { pick: ['DateTimeOriginal'] });
-        date = exif?.DateTimeOriginal ? new Date(exif.DateTimeOriginal) : null;
-      } catch(e) {}
-      return { item, date };
-    }));
-    withDates.sort((a, b) => {
-      if (!a.date && !b.date) return 0;
-      if (!a.date) return 1;
-      if (!b.date) return -1;
-      return b.date - a.date;
+    items.sort((a, b) => {
+      const fa = getFilename(a.querySelector('img').src);
+      const fb = getFilename(b.querySelector('img').src);
+      const da = exifMap[fa]?.date_taken ? new Date(exifMap[fa].date_taken) : null;
+      const db = exifMap[fb]?.date_taken ? new Date(exifMap[fb].date_taken) : null;
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return db - da;  // newest first
     });
-    withDates.forEach(({ item }) => grid.appendChild(item));
+    items.forEach(item => grid.appendChild(item));
   }
-  sortGalleryByDate();
+
+  // Boot: load CSV then sort gallery
+  loadExifCsv().then(() => sortGalleryByDate());
 
   // ── SPECIES SORT ─────────────────────────────────────────────────────────
   // Thai: leading vowels เ แ โ ใ ไ are written before the consonant — sort by consonant first
