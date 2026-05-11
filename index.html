@@ -671,4 +671,27 @@
     document.getElementById('lb-cap').textContent = cap;
   }
   function lbNav(d) { lbIdx = (lbIdx + d + lbItems.length) % lbItems.length; updateLb(); }
-  function lbClose() { document.getElementById('lightbox').classList
+  function lbClose() { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow=''; }
+  function lbBg(e) { if (e.target === document.getElementById('lightbox')) lbClose(); }
+  document.addEventListener('keydown', e => {
+    if (e.key==='Escape') lbClose();
+    if (e.key==='ArrowLeft') lbNav(-1);
+    if (e.key==='ArrowRight') lbNav(1);
+  });
+  document.getElementById('gallery-grid').addEventListener('click', e => {
+    const item = e.target.closest('.gallery-item');
+    if (item) openLb([...document.querySelectorAll('.gallery-item')].indexOf(item));
+  });
+
+  // Contact form
+  function formSubmit(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('.f-submit');
+    const l = localStorage.getItem('bbn-lang') || 'en';
+    btn.textContent = l==='th' ? 'ส่งแล้ว ✓' : 'Sent ✓';
+    btn.style.background = '#2d8a27';
+    setTimeout(() => { btn.innerHTML='<span data-th>ส่งข้อความ</span><span data-en>Send Message</span>'; btn.style.background=''; setLang(l); e.target.reset(); }, 3000);
+  }
+</script>
+</body>
+</html>
