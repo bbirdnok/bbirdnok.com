@@ -8,6 +8,7 @@
   <meta name="keywords" content="ถ่ายภาพนก, นกไทย, สัตว์ป่าไทย, ช่างภาพธรรมชาติ, Thailand birds, Thai wildlife, bird photography Thailand, BBirdNok">
   <meta name="author" content="BBirdNok">
   <link rel="canonical" href="https://bbirdnok.com/">
+  <link rel="icon" href="data:,">
   <link rel="sitemap" type="application/xml" href="https://bbirdnok.com/sitemap.xml">
   <link rel="alternate" hreflang="th" href="https://bbirdnok.com/">
   <link rel="alternate" hreflang="en" href="https://bbirdnok.com/">
@@ -27,6 +28,9 @@
   <meta name="twitter:title" content="BBirdNok — Thailand Bird & Wildlife Photographer">
   <meta name="twitter:description" content="Bird, wildlife and nature photography in Thailand">
   <meta name="twitter:image" content="https://bbirdnok.com/images/hero-banner.png">
+
+  <!-- EXIF reader -->
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -193,16 +197,18 @@
     /* ============================================
        LIGHTBOX
     ============================================ */
-    .lightbox { position: fixed; inset: 0; z-index: 9999; background: rgba(8,10,14,0.97); display: none; align-items: center; justify-content: center; padding: 24px; }
+    .lightbox { position: fixed; inset: 0; z-index: 9999; background: rgba(8,10,14,0.97); display: none; align-items: center; justify-content: center; padding: 24px 24px 96px; }
     .lightbox.open { display: flex; }
-    .lb-img { max-height: 82vh; max-width: 88vw; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .lb-img { max-height: 78vh; max-width: 88vw; border-radius: var(--radius); box-shadow: var(--shadow); }
     .lb-close { position: absolute; top: 20px; right: 28px; font-size: 2.2rem; cursor: pointer; color: var(--text-dim); transition: color var(--ease); line-height: 1; }
     .lb-close:hover { color: var(--cream); }
     .lb-prev, .lb-next { position: absolute; top: 50%; transform: translateY(-50%); font-size: 2rem; cursor: pointer; color: var(--text-dim); padding: 14px; background: rgba(255,255,255,0.06); border-radius: 50%; transition: all var(--ease); }
     .lb-prev:hover, .lb-next:hover { color: var(--cream); background: rgba(255,255,255,0.12); }
     .lb-prev { left: 20px; }
     .lb-next { right: 20px; }
-    .lb-caption { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); text-align: center; color: var(--cream-dim); font-size: 0.84rem; white-space: nowrap; }
+    .lb-caption { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding: 18px 60px 22px; background: linear-gradient(to top, rgba(8,10,14,0.92) 0%, transparent 100%); }
+    .lb-cap-desc { color: var(--cream); font-size: 0.86rem; line-height: 1.55; margin-bottom: 5px; }
+    .lb-cap-exif { color: var(--text-dim); font-size: 0.72rem; font-family: var(--font-en); letter-spacing: 0.03em; min-height: 1em; }
 
     /* ============================================
        SPECIES INDEX
@@ -223,6 +229,8 @@
     .vu { background: #2a1a00; color: #f5a020; }
     .en { background: #2a1000; color: #f56020; }
     .cr { background: #2a0808; color: #f52020; }
+    .sp-photo-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; cursor: pointer; font-size: 0.82rem; color: var(--text-dim); transition: all var(--ease); margin: 0 2px; }
+    .sp-photo-btn:hover { border-color: var(--green-light); color: var(--cream); background: rgba(45,90,39,0.15); }
 
     /* ============================================
        BLOG
@@ -324,7 +332,10 @@
   <span class="lb-prev" onclick="lbNav(-1);event.stopPropagation()">‹</span>
   <img class="lb-img" id="lb-img" src="" alt="">
   <span class="lb-next" onclick="lbNav(1);event.stopPropagation()">›</span>
-  <div class="lb-caption" id="lb-cap"></div>
+  <div class="lb-caption">
+    <div class="lb-cap-desc" id="lb-cap-desc"></div>
+    <div class="lb-cap-exif" id="lb-cap-exif"></div>
+  </div>
 </div>
 
 <!-- MOBILE MENU -->
@@ -468,19 +479,44 @@
       <table class="species-table">
         <thead>
           <tr>
-            <th data-th>ชื่อไทย</th><th data-en>Thai Name</th>
-            <th>Scientific Name</th>
-            <th data-th>ชื่ออังกฤษ</th><th data-en>English Name</th>
-            <th data-th>สถานะ IUCN</th><th data-en>IUCN Status</th>
+            <th><span data-th>ชื่อไทย</span><span data-en>Thai Name</span></th>
+            <th><span data-th>ชื่อวิทยาศาสตร์</span><span data-en>Scientific Name</span></th>
+            <th><span data-th>ชื่ออังกฤษ</span><span data-en>English Name</span></th>
+            <th><span data-th>สถานะ IUCN</span><span data-en>IUCN Status</span></th>
+            <th><span data-th>ภาพ</span><span data-en>Photos</span></th>
           </tr>
         </thead>
         <tbody>
-          <tr><td data-th>นกกระเบื้องผา</td><td data-en>Blue Rock Thrush</td><td><em>Monticola solitarius</em></td><td data-th>บลู ร็อค ทรัช</td><td data-en>Blue Rock Thrush</td><td><span class="badge lc">LC</span></td></tr>
-          <tr><td data-th>นกขุนแผนหัวแดง</td><td data-en>Red-headed Trogon</td><td><em>Harpactes erythrocephalus</em></td><td data-th>เรด-เฮดเด็ด โทรกอน</td><td data-en>Red-headed Trogon</td><td><span class="badge lc">LC</span></td></tr>
-          <tr><td data-th>นกจาบคาเคราน้ำเงิน</td><td data-en>Blue-bearded Bee-eater</td><td><em>Nyctyornis athertoni</em></td><td data-th>บลู-เบียร์เด็ด บี-อีเตอร์</td><td data-en>Blue-bearded Bee-eater</td><td><span class="badge lc">LC</span></td></tr>
-          <tr><td data-th>นกกางเขนน้ำหลังเทา</td><td data-en>Slaty-backed Forktail</td><td><em>Enicurus schistaceus</em></td><td data-th>สเลตตี้-แบ็กด์ ฟอร์คเทล</td><td data-en>Slaty-backed Forktail</td><td><span class="badge lc">LC</span></td></tr>
-          <tr><td data-th>นกปลีกล้วยลาย</td><td data-en>Streaked Spiderhunter</td><td><em>Arachnothera magna</em></td><td data-th>สตรีกด์ สไปเดอร์ฮันเตอร์</td><td data-en>Streaked Spiderhunter</td><td><span class="badge lc">LC</span></td></tr>
-          <tr><td data-th>นกยอดข้าวหางแพนลาย</td><td data-en>Zitting Cisticola</td><td><em>Cisticola juncidis</em></td><td data-th>ซิตติ้ง ซิสติโคลา</td><td data-en>Zitting Cisticola</td><td><span class="badge lc">LC</span></td></tr>
+          <tr data-thai="นกกระเบื้องผา" data-eng="Blue Rock Thrush">
+            <td>นกกระเบื้องผา</td><td><em>Monticola solitarius</em></td>
+            <td>Blue Rock Thrush</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกกระเบื้องผา',0)">🖼</button></td>
+          </tr>
+          <tr data-thai="นกขุนแผนหัวแดง" data-eng="Red-headed Trogon">
+            <td>นกขุนแผนหัวแดง</td><td><em>Harpactes erythrocephalus</em></td>
+            <td>Red-headed Trogon</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกขุนแผนหัวแดง',0)">🖼</button></td>
+          </tr>
+          <tr data-thai="นกจาบคาเคราน้ำเงิน" data-eng="Blue-bearded Bee-eater">
+            <td>นกจาบคาเคราน้ำเงิน</td><td><em>Nyctyornis athertoni</em></td>
+            <td>Blue-bearded Bee-eater</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกจาบคาเคราน้ำเงิน',0)">🖼</button></td>
+          </tr>
+          <tr data-thai="นกกางเขนน้ำหลังเทา" data-eng="Slaty-backed Forktail">
+            <td>นกกางเขนน้ำหลังเทา</td><td><em>Enicurus schistaceus</em></td>
+            <td>Slaty-backed Forktail</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกกางเขนน้ำหลังเทา',0)">🖼</button></td>
+          </tr>
+          <tr data-thai="นกปลีกล้วยลาย" data-eng="Streaked Spiderhunter">
+            <td>นกปลีกล้วยลาย</td><td><em>Arachnothera magna</em></td>
+            <td>Streaked Spiderhunter</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกปลีกล้วยลาย',0)">🖼</button></td>
+          </tr>
+          <tr data-thai="นกยอดข้าวหางแพนลาย" data-eng="Zitting Cisticola">
+            <td>นกยอดข้าวหางแพนลาย</td><td><em>Cisticola juncidis</em></td>
+            <td>Zitting Cisticola</td><td><span class="badge lc">LC</span></td>
+            <td><button class="sp-photo-btn" onclick="openLbSpeciesPhoto('นกยอดข้าวหางแพนลาย',0)">🖼</button></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -626,71 +662,178 @@
 </footer>
 
 <script>
-  // Language
+  // ── SPECIES → PHOTOS MAP ─────────────────────────────────────────────────
+  const SPECIES_PHOTOS = {
+    'นกกระเบื้องผา':       [{src:'images/gallery/photo-01.jpg', captionTh:'นกกระเบื้องผา', captionEn:'Blue Rock Thrush'}],
+    'นกขุนแผนหัวแดง':     [{src:'images/gallery/photo-02.jpg', captionTh:'นกขุนแผนหัวแดง', captionEn:'Red-headed Trogon'}],
+    'นกจาบคาเคราน้ำเงิน': [{src:'images/gallery/photo-03.jpg', captionTh:'นกจาบคาเคราน้ำเงิน', captionEn:'Blue-bearded Bee-eater'}],
+    'นกกางเขนน้ำหลังเทา': [{src:'images/gallery/photo-04.jpg', captionTh:'นกกางเขนน้ำหลังเทา', captionEn:'Slaty-backed Forktail'}],
+    'นกปลีกล้วยลาย':      [{src:'images/gallery/photo-05.jpg', captionTh:'นกปลีกล้วยลาย', captionEn:'Streaked Spiderhunter'}],
+    'นกยอดข้าวหางแพนลาย': [{src:'images/gallery/photo-06.jpg', captionTh:'นกยอดข้าวหางแพนลาย', captionEn:'Zitting Cisticola'}],
+  };
+
+  // ── LANGUAGE ─────────────────────────────────────────────────────────────
   function setLang(l) {
     document.body.className = 'lang-' + l;
     document.getElementById('btn-th').classList.toggle('active', l==='th');
     document.getElementById('btn-en').classList.toggle('active', l==='en');
     document.documentElement.lang = l;
     localStorage.setItem('bbn-lang', l);
+    sortSpecies(l);
   }
   setLang(localStorage.getItem('bbn-lang') || 'en');
 
-  // Nav scroll
+  // ── NAV SCROLL ───────────────────────────────────────────────────────────
   window.addEventListener('scroll', () => {
     document.getElementById('nav').classList.toggle('scrolled', scrollY > 60);
   });
 
-  // Mobile menu
+  // ── MOBILE MENU ──────────────────────────────────────────────────────────
   function toggleMenu() {
     const m = document.getElementById('mob-menu');
     m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
   }
 
-  // Fade-in on scroll
+  // ── FADE-IN ON SCROLL ────────────────────────────────────────────────────
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
   }, { threshold: 0.08 });
   document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
 
-  // Lightbox
-  let lbIdx = 0, lbItems = [];
-  function openLb(idx) {
-    lbItems = [...document.querySelectorAll('.gallery-item img')];
-    if (!lbItems.length) return;
-    lbIdx = idx; updateLb();
+  // ── LIGHTBOX ─────────────────────────────────────────────────────────────
+  let lbItems = [], lbIdx = 0;
+
+  function openLb(items, idx) {
+    lbItems = items;
+    lbIdx = typeof idx === 'number' ? idx : 0;
+    updateLb();
     document.getElementById('lightbox').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
-  function updateLb() {
-    const img = lbItems[lbIdx];
-    document.getElementById('lb-img').src = img.src;
-    const item = img.closest('.gallery-item');
-    const lang = localStorage.getItem('bbn-lang') || 'th';
-    const cap = item?.querySelector(lang==='th' ? '.g-cap-th' : '.g-cap-en')?.textContent || '';
-    document.getElementById('lb-cap').textContent = cap;
+
+  function openLbGallery(idx) {
+    const items = [...document.querySelectorAll('.gallery-item')].map(item => ({
+      src: item.querySelector('img').src,
+      captionTh: item.querySelector('.g-cap-th')?.textContent || '',
+      captionEn: item.querySelector('.g-cap-en')?.textContent || '',
+    }));
+    openLb(items, idx);
   }
+
+  function openLbSpeciesPhoto(thaiName, photoIdx) {
+    const photos = SPECIES_PHOTOS[thaiName] || [];
+    if (!photos.length) return;
+    openLb(photos, photoIdx);
+  }
+
+  function updateLb() {
+    const item = lbItems[lbIdx];
+    if (!item) return;
+    document.getElementById('lb-img').src = item.src;
+    const lang = localStorage.getItem('bbn-lang') || 'en';
+    document.getElementById('lb-cap-desc').textContent = lang === 'th' ? item.captionTh : item.captionEn;
+    document.getElementById('lb-cap-exif').textContent = '';
+    loadExif(item.src);
+  }
+
+  async function loadExif(src) {
+    const el = document.getElementById('lb-cap-exif');
+    try {
+      if (typeof Exifr === 'undefined') { el.textContent = ''; return; }
+      const exif = await Exifr.parse(src, {
+        tiff: true, exif: true,
+        pick: ['DateTimeOriginal','Make','Model','LensModel','FocalLength','FNumber','ExposureTime','ISOSpeedRatings']
+      });
+      if (!exif) { el.textContent = ''; return; }
+      const parts = [];
+      if (exif.DateTimeOriginal) {
+        const d = new Date(exif.DateTimeOriginal);
+        parts.push('\u{1F4C5} ' + d.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'}));
+      }
+      const camParts = [exif.Make, exif.Model].filter(Boolean);
+      if (camParts.length) {
+        let cam = camParts.join(' ').replace(/^(\w+)\s+\1\s+/i, '$1 ').trim();
+        parts.push('\u{1F4F7} ' + cam);
+      }
+      if (exif.LensModel) parts.push('\u{1F52D} ' + exif.LensModel);
+      if (exif.FocalLength) parts.push(exif.FocalLength + 'mm');
+      if (exif.FNumber)     parts.push('f/' + exif.FNumber);
+      el.textContent = parts.join('  \u00B7  ');
+    } catch(e) {
+      el.textContent = '';
+    }
+  }
+
   function lbNav(d) { lbIdx = (lbIdx + d + lbItems.length) % lbItems.length; updateLb(); }
-  function lbClose() { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow=''; }
+  function lbClose() { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow = ''; }
   function lbBg(e) { if (e.target === document.getElementById('lightbox')) lbClose(); }
+
   document.addEventListener('keydown', e => {
-    if (e.key==='Escape') lbClose();
-    if (e.key==='ArrowLeft') lbNav(-1);
-    if (e.key==='ArrowRight') lbNav(1);
-  });
-  document.getElementById('gallery-grid').addEventListener('click', e => {
-    const item = e.target.closest('.gallery-item');
-    if (item) openLb([...document.querySelectorAll('.gallery-item')].indexOf(item));
+    if (e.key === 'Escape')     lbClose();
+    if (e.key === 'ArrowLeft')  lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
   });
 
-  // Contact form
+  document.getElementById('gallery-grid').addEventListener('click', e => {
+    const item = e.target.closest('.gallery-item');
+    if (item) openLbGallery([...document.querySelectorAll('.gallery-item')].indexOf(item));
+  });
+
+  // ── GALLERY SORT BY EXIF DATE ────────────────────────────────────────────
+  async function sortGalleryByDate() {
+    if (typeof Exifr === 'undefined') return;
+    const grid = document.getElementById('gallery-grid');
+    const items = [...grid.querySelectorAll('.gallery-item')];
+    const withDates = await Promise.all(items.map(async item => {
+      const img = item.querySelector('img');
+      let date = null;
+      try {
+        const exif = await Exifr.parse(img.src, { pick: ['DateTimeOriginal'] });
+        date = exif?.DateTimeOriginal ? new Date(exif.DateTimeOriginal) : null;
+      } catch(e) {}
+      return { item, date };
+    }));
+    withDates.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return b.date - a.date;
+    });
+    withDates.forEach(({ item }) => grid.appendChild(item));
+  }
+  sortGalleryByDate();
+
+  // ── SPECIES SORT ─────────────────────────────────────────────────────────
+  function thaiSortKey(s) {
+    const lead = '\u0e40\u0e41\u0e42\u0e43\u0e44';
+    if (s && s.length > 1 && lead.includes(s[0])) return s[1] + s[0] + s.slice(2);
+    return s || '';
+  }
+
+  function sortSpecies(lang) {
+    const tbody = document.querySelector('.species-table tbody');
+    if (!tbody) return;
+    const rows = [...tbody.querySelectorAll('tr')];
+    rows.sort((a, b) => lang === 'en'
+      ? (a.dataset.eng || '').localeCompare(b.dataset.eng || '', 'en')
+      : thaiSortKey(a.dataset.thai || '').localeCompare(thaiSortKey(b.dataset.thai || ''), 'th')
+    );
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  // ── CONTACT FORM ──────────────────────────────────────────────────────────
   function formSubmit(e) {
     e.preventDefault();
     const btn = e.target.querySelector('.f-submit');
     const l = localStorage.getItem('bbn-lang') || 'en';
-    btn.textContent = l==='th' ? 'ส่งแล้ว ✓' : 'Sent ✓';
+    btn.textContent = l === 'th' ? '\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27 \u2713' : 'Sent \u2713';
     btn.style.background = '#2d8a27';
-    setTimeout(() => { btn.innerHTML='<span data-th>ส่งข้อความ</span><span data-en>Send Message</span>'; btn.style.background=''; setLang(l); e.target.reset(); }, 3000);
+    setTimeout(() => {
+      btn.innerHTML = '<span data-th>\u0e2a\u0e48\u0e07\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21</span><span data-en>Send Message</span>';
+      btn.style.background = '';
+      setLang(l);
+      e.target.reset();
+    }, 3000);
   }
 </script>
 </body>
