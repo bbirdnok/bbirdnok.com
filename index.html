@@ -804,10 +804,22 @@
   sortGalleryByDate();
 
   // ── SPECIES SORT ─────────────────────────────────────────────────────────
+  // Thai: leading vowels เ แ โ ใ ไ are written before the consonant — sort by consonant first
   function thaiSortKey(s) {
     const lead = '\u0e40\u0e41\u0e42\u0e43\u0e44';
     if (s && s.length > 1 && lead.includes(s[0])) return s[1] + s[0] + s.slice(2);
     return s || '';
+  }
+
+  // English: sort by last word (main type, e.g. Thrush / Trogon / Forktail),
+  // then by the preceding words (sub-type) — "Red-headed Trogon" before "White-tailed Trogon"
+  function engSortKey(s) {
+    if (!s) return '';
+    const words = s.split(' ');
+    if (words.length <= 1) return s;
+    const main = words[words.length - 1];          // e.g. "Trogon"
+    const sub  = words.slice(0, -1).join(' ');     // e.g. "Red-headed"
+    return main + ' ' + sub;
   }
 
   function sortSpecies(lang) {
@@ -815,7 +827,7 @@
     if (!tbody) return;
     const rows = [...tbody.querySelectorAll('tr')];
     rows.sort((a, b) => lang === 'en'
-      ? (a.dataset.eng || '').localeCompare(b.dataset.eng || '', 'en')
+      ? engSortKey(a.dataset.eng || '').localeCompare(engSortKey(b.dataset.eng || ''), 'en')
       : thaiSortKey(a.dataset.thai || '').localeCompare(thaiSortKey(b.dataset.thai || ''), 'th')
     );
     rows.forEach(r => tbody.appendChild(r));
