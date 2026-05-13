@@ -1001,7 +1001,7 @@
   <div class="container">
     <div class="about-grid">
       <div class="about-img-wrap fade-in">
-        <div class="about-img"><img src="images/about.jpg" alt="BBirdNok — Thai bird & wildlife photographer" loading="lazy"></div>
+        <div class="about-img"><img src="images/about.jpg" alt="BBirdNok &mdash; Thai bird &amp; wildlife photographer" loading="lazy"></div>
         <div class="about-accent"></div>
       </div>
       <div class="fade-in">
@@ -1389,4 +1389,12 @@
     btn.textContent = l === 'th' ? '\u0e2a\u0e48\u0e07\u0e41\u0e25\u0e49\u0e27 \u2713' : 'Sent \u2713';
     btn.style.background = '#2d8a27';
     setTimeout(() => {
-      btn.innerHTML = '<span data-th>\u0e2a\u0e48\u0e07\u0e02\u0e49\u0e2d\u0e04\u0e27
+      btn.innerHTML = '<span data-th>\u0e2a\u0e48\u0e07\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21</span><span data-en>Send Message</span>';
+      btn.style.background = '';
+      setLang(l);
+      e.target.reset();
+    }, 3000);
+  }
+</script>
+</body>
+</html>
