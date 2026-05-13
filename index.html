@@ -209,7 +209,7 @@
     .lb-next { right: 20px; }
     .lb-caption { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding: 18px 60px 22px; background: linear-gradient(to top, rgba(8,10,14,0.92) 0%, transparent 100%); }
     .lb-cap-desc { color: var(--cream); font-size: 0.86rem; line-height: 1.55; margin-bottom: 5px; }
-    .lb-cap-exif { color: var(--text-dim); font-size: 0.72rem; font-family: var(--font-en); letter-spacing: 0.03em; min-height: 1em; }
+    .lb-cap-exif { color: var(--text-dim); font-size: 0.72rem; font-family: var(--font-en); letter-spacing: 0.03em; min-height: 1em; white-space: pre-line; line-height: 1.5; }
 
     /* ============================================
        SPECIES INDEX
@@ -1267,42 +1267,63 @@
     return src.split('/').pop().split('?')[0];
   }
 
+  // ── LENS NAME MAP ── translate raw EXIF lens model to proper lens name ──
+  // Keyed by "<body>|<raw lens model>" for body-aware disambiguation.
+  // Falls back to raw lens string if no match.
+  const LENS_NAME_MAP = {
+    'Canon EOS D30|205.0-390.0 mm': 'Tamron AF 200-400mm F/5.6 LD-IF',
+    'Canon EOS D30|120.0-300.0 mm': 'Sigma APO 120-300mm F2.8 EX IF HSM',
+    'Canon EOS D30|100.0-300.0 mm': 'Sigma APO 120-300mm F2.8 EX IF HSM',
+    'Canon EOS D30|600.0 mm':       'Sigma APO 120-300mm F2.8 EX IF HSM',
+    'Canon EOS D30|500.0 mm':       'Canon EF 500mm f/4.5L USM',
+    'Canon EOS 40D|170.0-500.0 mm': 'Sigma APO 170-500mm F5-6.3 ASP RF',
+  };
+
+  function resolveLens(e) {
+    const lensMake  = e['EXIF:Lens Make']  || '';
+    const lensModel = e['EXIF:Lens Model'] || '';
+    if (!lensModel) return '';
+    const raw = lensModel.toUpperCase().startsWith(lensMake.toUpperCase())
+      ? lensModel : (lensMake + ' ' + lensModel).trim();
+    const body = (e['EXIF:Model'] || '').trim();
+    return LENS_NAME_MAP[body + '|' + raw] || raw;
+  }
+
   function formatExifLine(filename) {
     const e = exifMap[filename];
     if (!e) return '';
     const lang   = localStorage.getItem('bbn-lang') || 'en';
     const locale = lang === 'th' ? 'th-TH' : 'en-GB';
-    const parts  = [];
 
+    // Line 1 — date, camera, lens
+    const line1 = [];
     const d = parseExifDate(e['EXIF:Date Taken [Y-m-d_H-M-S]']);
-    if (d) parts.push('\u{1F4C5} ' + d.toLocaleDateString(locale, {day:'2-digit', month:'short', year:'numeric'}));
+    if (d) line1.push('\u{1F4C5} ' + d.toLocaleDateString(locale, {day:'2-digit', month:'short', year:'numeric'}));
 
     const make  = e['EXIF:Make']  || '';
     const model = e['EXIF:Model'] || '';
     const cam   = model.toUpperCase().startsWith(make.toUpperCase()) ? model : (make + ' ' + model).trim();
-    if (cam) parts.push('\u{1F4F7} ' + cam);
+    if (cam) line1.push('\u{1F4F7} ' + cam);
 
-    const lensMake  = e['EXIF:Lens Make']  || '';
-    const lensModel = e['EXIF:Lens Model'] || '';
-    if (lensModel) {
-      const lens = lensModel.toUpperCase().startsWith(lensMake.toUpperCase())
-        ? lensModel : (lensMake + ' ' + lensModel).trim();
-      parts.push('\u{1F52D} ' + lens);
-    }
+    const lens = resolveLens(e);
+    if (lens) line1.push('\u{1F52D} ' + lens);
 
-    if (e['EXIF:Focal Length']) parts.push(e['EXIF:Focal Length'] + 'mm');
-    if (e['EXIF:F-Number'])     parts.push('f/' + e['EXIF:F-Number']);
-    if (e['EXIF:Shutter Speed'])parts.push(e['EXIF:Shutter Speed'] + 's');
-    if (e['EXIF:ISO Value'])    parts.push('ISO ' + e['EXIF:ISO Value']);
+    // Line 2 — focal length, aperture, shutter speed, ISO
+    const line2 = [];
+    if (e['EXIF:Focal Length']) line2.push(e['EXIF:Focal Length'] + 'mm');
+    if (e['EXIF:F-Number'])     line2.push('f/' + e['EXIF:F-Number']);
+    if (e['EXIF:Shutter Speed'])line2.push(e['EXIF:Shutter Speed'] + 's');
+    if (e['EXIF:ISO Value'])    line2.push('ISO ' + e['EXIF:ISO Value']);
 
-    return parts.join('  \u00B7  ');
+    const sep = '  ·  ';
+    return [line1.join(sep), line2.join(sep)].filter(s => s).join('\n');
   }
 
   function loadExif(src) {
     document.getElementById('lb-cap-exif').textContent = formatExifLine(getFilename(src));
   }
 
-  // ── GEAR LIST — auto-populated from unique cameras + lenses in exif.csv ──
+  // ── GEAR LIST ── auto-populated from unique cameras + lenses in exif.csv ──
   function buildGearList() {
     const ul = document.getElementById('gear-list');
     if (!ul) return;
@@ -1312,21 +1333,8 @@
       const model = e['EXIF:Model'] || '';
       const cam   = model.toUpperCase().startsWith(make.toUpperCase()) ? model : (make + ' ' + model).trim();
       if (cam) cameras.add(cam);
-      const lm  = e['EXIF:Lens Make']  || '';
-      const lmo = e['EXIF:Lens Model'] || '';
-      if (lmo) {
-        const lensRaw = lmo.toUpperCase().startsWith(lm.toUpperCase())
-          ? lmo : (lm + ' ' + lmo).trim();
-        // Map raw EXIF focal-length strings to proper lens names
-        const lensMap = {
-          '205.0-390.0 mm': 'Tamron AF 200-400mm F/5.6 LD-IF',
-          '120.0-300.0 mm': 'Sigma APO 120-300mm F2.8 EX IF HSM',
-          '100.0-300.0 mm': 'Sigma APO 120-300mm F2.8 EX IF HSM',
-          '600.0 mm':       'Sigma APO 120-300mm F2.8 EX IF HSM',
-          '500.0 mm':       'Canon EF 500mm f/4.5L USM',
-        };
-        lenses.add(lensMap[lensRaw] || lensRaw);
-      }
+      const lens = resolveLens(e);
+      if (lens) lenses.add(lens);
     });
     ul.innerHTML = '';
     [...cameras].sort().forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
