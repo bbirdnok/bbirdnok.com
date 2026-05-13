@@ -1,1 +1,10 @@
+# Local-only files — never publish these to the public website.
+# Credentials & API tokens
 login_and_token.txt
+
+# Session context for Claude / Cowork (contains workflow notes, never publish)
+PROJECT_CONTEXT.md
+
+# Source CSV not consumed by the live site (species table is hardcoded in index.html).
+# Note: exif.csv IS published — it is fetched at runtime by loadExifCsv().
+species.csv
