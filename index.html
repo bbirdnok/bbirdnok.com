@@ -230,6 +230,12 @@
     .vu { background: #2a1a00; color: #f5a020; }
     .en { background: #2a1000; color: #f56020; }
     .cr { background: #2a0808; color: #f52020; }
+    .iucn-legend { margin-top: 24px; padding: 18px 20px; background: var(--bg2); border-radius: var(--radius); border: 1px solid var(--border); }
+    .iucn-legend-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cream-dim); margin-bottom: 12px; display: block; }
+    .iucn-legend-items { display: flex; flex-wrap: wrap; gap: 18px 24px; }
+    .iucn-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--cream-dim); line-height: 1.4; }
+    .iucn-item .badge { flex-shrink: 0; }
+    .iucn-item small { color: var(--text-dim); font-size: 0.92em; }
     .sp-photo-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; cursor: pointer; font-size: 0.82rem; color: var(--text-dim); transition: all var(--ease); margin: 0 2px; }
     .sp-photo-btn:hover { border-color: var(--green-light); color: var(--cream); background: rgba(45,90,39,0.15); }
 
@@ -1285,6 +1291,33 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="iucn-legend fade-in">
+      <span class="iucn-legend-title" data-th>ความหมายสถานะการอนุรักษ์ IUCN</span>
+      <span class="iucn-legend-title" data-en>IUCN Conservation Status</span>
+      <div class="iucn-legend-items">
+        <span class="iucn-item">
+          <span class="badge lc">LC</span>
+          <span><span data-th>น่ากังวลน้อยที่สุด</span><span data-en>Least Concern</span></span>
+        </span>
+        <span class="iucn-item">
+          <span class="badge nt">NT</span>
+          <span><span data-th>ใกล้ถูกคุกคาม</span><span data-en>Near Threatened</span></span>
+        </span>
+        <span class="iucn-item">
+          <span class="badge vu">VU</span>
+          <span><span data-th>มีแนวโน้มใกล้สูญพันธุ์</span><span data-en>Vulnerable</span></span>
+        </span>
+        <span class="iucn-item">
+          <span class="badge en">EN</span>
+          <span><span data-th>ใกล้สูญพันธุ์</span><span data-en>Endangered</span></span>
+        </span>
+        <span class="iucn-item">
+          <span class="badge cr">CR</span>
+          <span><span data-th>ใกล้สูญพันธุ์อย่างยิ่ง</span><span data-en>Critically Endangered</span></span>
+        </span>
+      </div>
     </div>
   </div>
 </section>
