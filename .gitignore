@@ -8,3 +8,11 @@ PROJECT_CONTEXT.md
 # Source CSV not consumed by the live site (species table is hardcoded in index.html).
 # Note: exif.csv IS published — it is fetched at runtime by loadExifCsv().
 species.csv
+
+# R2 upload tooling — credentials-aware, runs locally only
+upload_to_r2.py
+run_r2_upload.command
+
+# Gallery images now live in Cloudflare R2 (img.bbirdnok.com) — keep local copies
+# on disk as a backup but never commit them. Site is unaffected.
+images/gallery/
